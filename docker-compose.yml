@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: nawa
+      POSTGRES_PASSWORD: nawa
+      POSTGRES_DB: nawa
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nawa -d nawa"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+psycopg://nawa:nawa@db:5432/nawa
+      # Override this in a real deployment. The app refuses to start in
+      # production with the placeholder key.
+      SECRET_KEY: ${SECRET_KEY:-change-me-before-you-deploy-this-anywhere-real}
+      DAILY_GENERATION_LIMIT: ${DAILY_GENERATION_LIMIT:-40}
+      MAX_TEXT_CHARS: ${MAX_TEXT_CHARS:-4000}
+      SYNTH_CONCURRENCY: ${SYNTH_CONCURRENCY:-3}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
